@@ -63,8 +63,11 @@ bool PointCloudMapper::Initialize(const ros::NodeHandle& n) {
 }
 
 bool PointCloudMapper::LoadParameters(const ros::NodeHandle& n) {
+  // Load fixed frame.
+  if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
+
   // Load map parameters.
-  if (!pu::Get("map/octree_resolution", octree_resolution_));
+  if (!pu::Get("map/octree_resolution", octree_resolution_)) return false;
 
   // Initialize the map octree.
   map_octree_.reset(new Octree(octree_resolution_));
@@ -78,6 +81,8 @@ bool PointCloudMapper::LoadParameters(const ros::NodeHandle& n) {
 bool PointCloudMapper::RegisterCallbacks(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
+
+  map_pub_ = nl.advertise<PointCloud>("octree_map", 10, false);
 
   return true;
 }
@@ -140,4 +145,11 @@ bool PointCloudMapper::ApproxNearestNeighbors(const PointCloud& points,
   }
 
   return neighbors->points.size() > 0;
+}
+
+void PointCloudMapper::PublishMap() const {
+  if (initialized_ && map_pub_.getNumSubscribers() > 0) {
+    map_data_->header.frame_id = fixed_frame_id_;
+    map_pub_.publish(map_data_);
+  }
 }

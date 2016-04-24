@@ -67,6 +67,9 @@ class PointCloudMapper {
   // nearest neighbor.
   bool ApproxNearestNeighbors(const PointCloud& points, PointCloud* neighbors);
 
+  // Publish map for visualization.
+  void PublishMap() const;
+
  private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -74,6 +77,9 @@ class PointCloudMapper {
 
   // The node's name.
   std::string name_;
+
+  // Frame id for publishing map.
+  std::string fixed_frame_id_;
 
   // Boolean initialization flag that is set after success from LoadParameters.
   bool initialized_;
@@ -84,6 +90,9 @@ class PointCloudMapper {
 
   // Map parameters.
   double octree_resolution_;
+
+  // Map publisher.
+  ros::Publisher map_pub_;
 
 };
 
