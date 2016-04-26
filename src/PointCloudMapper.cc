@@ -134,14 +134,13 @@ bool PointCloudMapper::ApproxNearestNeighbors(const PointCloud& points,
   // Iterate over points in the input point cloud, finding the nearest neighbor
   // for every point and storing it in the output array.
   for (size_t ii = 0; ii < points.points.size(); ++ii) {
+    // Search for nearest neighbor and store.
     float unused = 0.f;
     int result_index = -1;
 
-    // Search for nearest neighbor and store.
     map_octree_->approxNearestSearch(points.points[ii], result_index, unused);
-    if (result_index >= 0) {
+    if (result_index >= 0)
       neighbors->push_back(map_data_->points[result_index]);
-    }
   }
 
   return neighbors->points.size() > 0;
