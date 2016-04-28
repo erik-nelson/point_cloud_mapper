@@ -42,6 +42,9 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/octree/octree_search.h>
 
+#include <mutex>
+#include <thread>
+
 class PointCloudMapper {
  public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -53,12 +56,14 @@ class PointCloudMapper {
   // Calls LoadParameters and RegisterCallbacks. Fails on failure of either.
   bool Initialize(const ros::NodeHandle& n);
 
+  // Resets the octree and stored points to an empty map. This is used when
+  // closing loops or otherwise regenerating the map from scratch.
+  void Reset();
+
   // Adds a set of points to the octree. Only inserts points if one does not
-  // already exist in the corresponding voxel. If requested, output the points
-  // from the input that ended up being inserted into the octree (useful for
-  // visualizing incremental map changes).
+  // already exist in the corresponding voxel. Output the points from the input
+  // that ended up being inserted into the octree.
   bool InsertPoints(const PointCloud::ConstPtr& points,
-                    bool populate_incremental_points,
                     PointCloud* incremental_points);
 
   // Returns the approximate nearest neighbor for every point in the input point
@@ -67,13 +72,20 @@ class PointCloudMapper {
   // nearest neighbor.
   bool ApproxNearestNeighbors(const PointCloud& points, PointCloud* neighbors);
 
-  // Publish map for visualization.
-  void PublishMap() const;
+  // Publish map for visualization. This can be expensive so it is not called
+  // from inside, as opposed to PublishMapUpdate().
+  void PublishMap();
 
  private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
+
+  // Threaded version to avoid blocking SLAM when the map gets big.
+  void PublishMapThread();
+
+  // Publish map updates for visualization.
+  void PublishMapUpdate(const PointCloud& incremental_points);
 
   // The node's name.
   std::string name_;
@@ -84,6 +96,13 @@ class PointCloudMapper {
   // Boolean initialization flag that is set after success from LoadParameters.
   bool initialized_;
 
+  // Boolean to only publish the map if it has been updated recently.
+  bool map_updated_;
+
+  // When a loop closure occurs, this flag enables a user to unsubscribe from
+  // and resubscribe to the incremental map topic in order to re-draw the map.
+  bool incremental_unsubscribed_;
+
   // Containers storing the map and its structure.
   PointCloud::Ptr map_data_;
   Octree::Ptr map_octree_;
@@ -93,7 +112,9 @@ class PointCloudMapper {
 
   // Map publisher.
   ros::Publisher map_pub_;
-
+  ros::Publisher incremental_map_pub_;
+  std::thread publish_thread_;
+  mutable std::mutex map_mutex_;
 };
 
 #endif
