@@ -113,6 +113,7 @@ class PointCloudMapper {
   // Map publisher.
   ros::Publisher map_pub_;
   ros::Publisher incremental_map_pub_;
+  ros::Subscriber force_map_;
   std::thread publish_thread_;
   mutable std::mutex map_mutex_;
 };

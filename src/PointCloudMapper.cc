@@ -36,8 +36,11 @@
 
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <parameter_utils/ParameterUtils.h>
+#include <std_msgs/Empty.h>
 
 namespace pu = parameter_utils;
+
+using std_msgs::Empty;
 
 PointCloudMapper::PointCloudMapper()
     : initialized_(false),
@@ -93,6 +96,13 @@ bool PointCloudMapper::RegisterCallbacks(const ros::NodeHandle& n) {
   map_pub_ = nl.advertise<PointCloud>("octree_map", 10, false);
   incremental_map_pub_ =
       nl.advertise<PointCloud>("octree_map_updates", 10, false);
+
+  // Force full map publishing
+  force_map_ = nl.subscribe<Empty>("force_map", 1,
+    [this](const Empty::ConstPtr&) {
+      map_updated_ = true;
+      PublishMap();
+    });
 
   return true;
 }
